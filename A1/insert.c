@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 	char* data = argv[3];
 	int fd1, fd2, now;
 	char c;
+	char* temp_string;
 
 	if ((fd1 = open(filename, O_RDWR)) < 0){
 		fprintf(stderr, "open error for %s\n", filename);
@@ -27,7 +28,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	char temp_string[now-offset];
+	temp_string = (char*)malloc(sizeof(char) * (now - offset));
 
 	if (temp_string == NULL){
 		fprintf(stderr, "malloc error\n");
@@ -39,8 +40,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	read(fd1, &temp_string, now - offset);
-	printf("string : %ld now : %d offset : %d \n", strlen(temp_string),now-offset, now);
+	read(fd1, temp_string, now - offset);
 
 	if ((fd2 = open(data, O_RDONLY)) < 0){
 		fprintf(stderr, "open error for %s\n", data);
@@ -65,8 +65,9 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	write(fd1, &temp_string, now - offset);
+	write(fd1, temp_string, now - offset);
 
 	close(fd1); 
+	free(temp_string);
 	exit(0);
 }
