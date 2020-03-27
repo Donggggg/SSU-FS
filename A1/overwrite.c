@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 int main(int argc, char* argv[])
 {
@@ -13,32 +14,22 @@ int main(int argc, char* argv[])
 	char* filename = argv[1];
 	int offset = atoi(argv[2]);
 	char* data = argv[3];
-	int fd1, fd2;
+	int fd;
 	char c;
 
-	if ((fd1 = open(filename, O_WRONLY)) < 0){
+	if ((fd = open(filename, O_WRONLY)) < 0){
 		fprintf(stderr, "open error for %s\n", filename);
 		exit(1);
 	}
 
-	if (lseek(fd1, offset, SEEK_SET) < 0){
+	if (lseek(fd, offset, SEEK_SET) < 0){
 		fprintf(stderr, "lseek error\n");
 		exit(1);
 	}
 
-	if ((fd2 = open(data, O_RDONLY)) < 0){
-		fprintf(stderr, "open error for %s\n", data);
-		exit(1);
-	}
+	write(fd, data, strlen(data));
 
-	while(1){
-		if (read(fd2, &c, 1) == 0)
-			break;
-		write(fd1, &c, 1);
-	}
-
-	close(fd1);
-	close(fd2);
+	close(fd);
 
 	exit(0);
 }

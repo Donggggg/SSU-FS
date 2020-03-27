@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "lseek error1\n");
 		exit(1);
 	}
-	printf("size : %d off : %d bytes : %d\n", size, offset, bytes);
 
 	if (lseek(fd, 0, SEEK_SET) < 0){
 		fprintf(stderr, "lseek error2\n");
@@ -43,8 +42,6 @@ int main(int argc, char* argv[])
 
 	tail = (char*)malloc(sizeof(char) * (size - offset - bytes));
 	read(fd, tail, size - offset - bytes);
-	printf("tail  : %s\n", tail);
-	printf("size : %d off : %d bytes : %d\n", size, offset, bytes);
 
 	close(fd);
 
