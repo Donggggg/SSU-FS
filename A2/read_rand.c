@@ -1,32 +1,64 @@
 #include <stdio.h>
-#include <sys/types.h>
-#include <time.h>
 #include <stdlib.h>
-//ÇÊ¿äÇÏ¸é header file Ãß°¡ °¡´É
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <time.h>
 
-
-#define SUFFLE_NUM	10000	// ÀÌ °ªÀº ¸¶À½´ë·Î ¼öÁ¤ÇÒ ¼ö ÀÖÀ½
+#define SUFFLE_NUM	10000	// ì´ ê°’ì€ ë§ˆìŒëŒ€ë¡œ ìˆ˜ì •í•  ìˆ˜ ìˆìŒ
 
 void GenRecordSequence(int *list, int n);
 void swap(int *a, int *b);
-// ÇÊ¿äÇÑ ÇÔ¼ö°¡ ÀÖÀ¸¸é ´õ Ãß°¡ÇÒ ¼ö ÀÖÀ½
 
-//
-// argv[1]: ·¹ÄÚµå ÆÄÀÏ¸í
-//
-int main((int argc, char **argv)
+int main(int argc, char **argv)
 {
+	if (argc != 2) {
+		fprintf(stderr, "usage : %s <data file>\n", argv[0]);
+		exit(1);
+	}
+
+	struct stat statbuf;
+	struct timeval startTime, endTime;
+	int i, fd, record_num, diffTime;
 	int *read_order_list;
 	int num_of_records;
+	char buf[100];
 
-	// ¾Æ·¡ ÇÔ¼ö¸¦ ½ÇÇàÇÏ¸é 'read_order_list' ¹è¿­¿¡ ÃßÈÄ ·£´ıÇÏ°Ô ÀĞ¾î¾ß ÇÒ ·¹ÄÚµå ¹øÈ£µéÀÌ ¼ø¼­´ë·Î ³ª¿­µÇ¾î ÀúÀåµÊ
-            // 'num_of_records'´Â ·¹ÄÚµå ÆÄÀÏ¿¡ ÀúÀåµÇ¾î ÀÖ´Â ÀüÃ¼ ·¹ÄÚµåÀÇ ¼ö¸¦ ÀÇ¹ÌÇÔ
+	if ((fd = open(argv[1], O_RDONLY)) < 0) {
+			fprintf(stderr, "open error for %s\n", argv[1]);
+			exit(1);
+	}
+
+	if (fstat(fd, &statbuf) < 0) {
+		fprintf(stderr, "fstat error!\n");
+		exit(1);
+	}
+
+	num_of_records = statbuf.st_size / 100;
+	read_order_list = malloc(sizeof(int) * num_of_records);
+
 	GenRecordSequence(read_order_list, num_of_records);
 
+	gettimeofday(&startTime, NULL);
+	for (i = 0; i < num_of_records; i++) {
+		if (lseek(fd, read_order_list[i] * 100, SEEK_SET) < 0) {
+				fprintf(stderr, "lseek error\n");
+				exit(1);
+		}
+		if (read(fd, buf, 100) != 100) {
+			fprintf(stderr, "read error\n");
+			exit(1);
+		}
+	}
+	gettimeofday(&endTime, NULL);
+	diffTime = (endTime.tv_sec - startTime.tv_sec) * (1e+6);
+	diffTime += (int)(endTime.tv_usec - startTime.tv_usec);
 
-	// 'read_order_list'¸¦ ÀÌ¿ëÇÏ¿© Ç¥ÁØ ÀÔ·ÂÀ¸·Î ¹ŞÀº ·¹ÄÚµå ÆÄÀÏ·ÎºÎÅÍ ·¹ÄÚµå¸¦ random ÇÏ°Ô ÀĞ¾îµéÀÌ°í,
-            // ÀÌ¶§ °É¸®´Â ½Ã°£À» ÃøÁ¤ÇÏ´Â ÄÚµå ±¸ÇöÇÔ
-
+	close(fd);
+	
+	printf("#records : %d timecost : %d us\n", num_of_records, diffTime);
 
 	return 0;
 }
@@ -37,12 +69,12 @@ void GenRecordSequence(int *list, int n)
 
 	srand((unsigned int)time(0));
 
-	for(i=0; i<n; i++)
+	for (i = 0; i < n; i++)
 	{
 		list[i] = i;
 	}
-	
-	for(i=0; i<SUFFLE_NUM; i++)
+
+	for(i = 0; i < SUFFLE_NUM; i++)
 	{
 		j = rand() % n;
 		k = rand() % n;
