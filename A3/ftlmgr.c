@@ -36,6 +36,11 @@ int main(int argc, char *argv[])
 			flashfp = fopen(argv[2], "r+");
 			page_num = atoi(argv[3]);
 
+			if(strlen(argv[4]) > SECTOR_SIZE || strlen(argv[5]) > SPARE_SIZE){
+				fprintf(stderr, "size of data error\n");
+				exit(1);
+			}
+
 			memcpy(sectorbuf, argv[4], strlen(argv[4]));
 			memcpy(sparebuf, argv[5], strlen(argv[5]));
 
