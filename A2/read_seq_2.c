@@ -16,28 +16,30 @@ int main(int argc, char **argv)
 	struct stat statbuf;
 	struct timeval startTime, endTime;
 	int i, fd, record_num, diffTime, diff;
+	FILE *fp;
 	char buf[100];
 
-	if ((fd = open(argv[1], O_RDONLY)) < 0) {
+	if ((fp = fopen(argv[1], "r")) < 0) {
 			fprintf(stderr, "open error for %s\n", argv[1]);
 			exit(1);
 			}
 
-	fstat(fd, &statbuf);
-	record_num = statbuf.st_size / 100;
+	fseek(fp, 0, SEEK_END);
+	record_num = ftell(fp) / 100;
 
 	gettimeofday(&startTime, NULL);
 	for (i = 0; i < record_num; i++) {
-		if (read(fd, buf, 100) != 100) {
+		if ((fd = fread(buf, 100, 1, fp) > 0)) {
 			fprintf(stderr, "read error!\n");
 			exit(1);
 		}
+		printf("%d\n", fd);
 	}
 	gettimeofday(&endTime, NULL);
 	diffTime = (endTime.tv_sec - startTime.tv_sec) * (1e+6);
 	diffTime += (int)(endTime.tv_usec - startTime.tv_usec);
 
-	close(fd);
+	fclose(fp);
 
 	printf("#records : %d timecost : %d : %d us\n", record_num, (int)(diffTime / (1e+6)), diffTime);
 

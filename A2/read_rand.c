@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 
 	close(fd);
 	
-	printf("#records : %d timecost : %d us\n", num_of_records, diffTime);
+	printf("#records : %d timecost : %d : %d us\n", num_of_records, (int)(diffTime / (1e+6)), diffTime);
 
 	return 0;
 }
