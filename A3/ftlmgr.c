@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
 	char pagebuf[PAGE_SIZE];
 	char blockbuf[BLOCK_SIZE];
 	char *buf;
+	char c;
 	char option = argv[1][0];
 	char print_page[PAGE_SIZE];
 	char sector_chk, spare_chk;
@@ -71,14 +72,20 @@ int main(int argc, char *argv[])
 			else { // 페이지가 차있는 경우 
 				while(1){ // free block 선정
 					block_num = rand() % size;
+
+					if(block_num  == page_num / 4)
+						block_num = rand() % size;
+						
 					fseek(flashfp, block_num * BLOCK_SIZE, SEEK_SET);
 
 					for(i = 0; i < PAGE_NUM; i++){
-						if(fgetc(flashfp) != 0xFF)
+						if((c = fgetc(flashfp)) != (char)0xFF){
 							break;
+						}
 						fseek(flashfp, SECTOR_SIZE - 1, SEEK_CUR);
-						if(fgetc(flashfp) != 0xFF)
+						if((c = fgetc(flashfp)) != (char)0xFF){
 							break;
+						}
 						fseek(flashfp, SPARE_SIZE - 1, SEEK_CUR);
 					}
 
