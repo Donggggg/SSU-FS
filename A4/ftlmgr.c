@@ -31,7 +31,6 @@ void ftl_open()
 		if(i >= DATAPAGES_PER_DEVICE)
 			spare_data_list[i].is_invalid = FALSE;
 	}
-	table[DATAPAGES_PER_DEVICE + PAGES_PER_BLOCK][1] = -1;
 
 	return;
 }
@@ -256,7 +255,7 @@ void ftl_print()
 	printf("lpn ppn\n");
 
 	for(i = 0; i < DATAPAGES_PER_DEVICE; i++)
-		printf("%3d %3d\n", table[i][0], table[i][1]);
+		printf("%d %d\n", table[i][0], table[i][1]);
 
 	printf("free block's pbn=%d\n", free_block);
 
