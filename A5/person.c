@@ -12,6 +12,7 @@ typedef struct _Node{
 }Node;
 
 Node *head;
+const int isNextPage = PAGE_SIZE / RECORD_SIZE;
 
 void readPage(FILE *fp, char *pagebuf, int pagenum)
 {
@@ -27,7 +28,7 @@ void writePage(FILE *fp, const char *pagebuf, int pagenum)
 
 void pack(char *recordbuf, const Person *p)
 {
-	strcat(recordbuf, p->sn);
+/*	strcat(recordbuf, p->sn);
 	strcat(recordbuf, "#");
 	strcat(recordbuf, p->name);
 	strcat(recordbuf, "#");
@@ -38,7 +39,8 @@ void pack(char *recordbuf, const Person *p)
 	strcat(recordbuf, p->phone);
 	strcat(recordbuf, "#");
 	strcat(recordbuf, p->email);
-	strcat(recordbuf, "#");
+	strcat(recordbuf, "#");*/
+	sprintf(recordbuf, "%s#%s#%s#%s#%s#%s#", p->sn, p->name, p->age, p->addr, p->phone, p->email);
 }
 
 void unpack(const char *recordbuf, Person *p)
@@ -48,7 +50,7 @@ void unpack(const char *recordbuf, Person *p)
 
 void insert(FILE *fp, const Person *p)
 {
-	int	isNextPage = PAGE_SIZE / RECORD_SIZE, offset;
+	int offset;
 	int total_pages, total_records, dpage_num, drecord_num;
 	char *recordbuf = malloc(sizeof(char) * RECORD_SIZE);
 	char *pagebuf = malloc(sizeof(char) * PAGE_SIZE);
@@ -57,6 +59,7 @@ void insert(FILE *fp, const Person *p)
 	struct stat statbuf;
 
 	pack(recordbuf, p);
+	printf("%s\n", recordbuf);
 
 	fstat(fp->_fileno, &statbuf);
 
@@ -115,7 +118,55 @@ void insert(FILE *fp, const Person *p)
 
 void delete(FILE *fp, const char *sn)
 {
+	int i, j, count = 0;
+	int total_pages, total_records, dpage_num, drecord_num;
+	char *tmp_sn = malloc(sizeof(char) * 14);
+	char *recordbuf = malloc(sizeof(char) * RECORD_SIZE);
+	char *pagebuf = malloc(sizeof(char) * PAGE_SIZE);
+	char *headerbuf = malloc(sizeof(char) * PAGE_SIZE);
+	char *tmp = malloc(sizeof(char) * PAGE_SIZE);
 
+	readPage(fp, headerbuf, 0);
+	memcpy(&total_pages, headerbuf, sizeof(int));
+	memcpy(&total_records, headerbuf+4, sizeof(int));
+	memcpy(&dpage_num, headerbuf+8, sizeof(int));
+	memcpy(&drecord_num, headerbuf+12, sizeof(int));
+
+	for(i = 1; i < total_pages; i++){
+		readPage(fp, pagebuf, i);
+
+		while(count != isNextPage){
+			memcpy(tmp_sn, pagebuf + (count*RECORD_SIZE), 14);
+
+			if(tmp_sn[0] == '*'){ // 삭제된 데이터인 경우 검사 스킵
+				count++;
+				continue;
+			}
+
+			for(j = 0; j < 14; j++) // 주민번호 파싱
+				if(tmp_sn[j] == '#'){
+					tmp_sn[j] = '\0';
+					break;
+				}
+
+			if(!strcmp(tmp_sn, sn)){ // 주민 번호 일치하는 경우 삭제 진행
+				memset(pagebuf + (count*RECORD_SIZE), (char)0xff, RECORD_SIZE);
+				memset(pagebuf + (count*RECORD_SIZE), '*', 1);
+				memcpy(pagebuf + (count*RECORD_SIZE) + 1, &dpage_num, sizeof(int));
+				memcpy(pagebuf + (count*RECORD_SIZE) + 5, &drecord_num, sizeof(int));
+				writePage(fp, pagebuf, i);
+
+				// header 페이지 갱신
+				memcpy(headerbuf+8, &i, sizeof(int));
+				memcpy(headerbuf+12, &count, sizeof(int));
+				writePage(fp, headerbuf, 0);
+
+				return ;
+			}
+			count++;
+		}
+		count = 0;
+	}
 }
 
 Node* set_delete_list(FILE *fp)
@@ -164,6 +215,7 @@ int main(int argc, char *argv[])
 	}
 	else if(!strcmp(argv[1], "d"))
 	{
+		delete(fp, argv[3]);
 
 	}
 	else
