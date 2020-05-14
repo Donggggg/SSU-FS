@@ -1,70 +1,175 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/stat.h>
 #include "person.h"
-//ÇÊ¿äÇÑ °æ¿ì Çì´õ ÆÄÀÏ°ú ÇÔ¼ö¸¦ Ãß°¡ÇÒ ¼ö ÀÖÀ½
 
-// °úÁ¦ ¼³¸í¼­´ë·Î ±¸ÇöÇÏ´Â ¹æ½ÄÀº °¢ÀÚ ´Ù¸¦ ¼ö ÀÖÁö¸¸ ¾à°£ÀÇ Á¦¾àÀ» µÓ´Ï´Ù.
-// ·¹ÄÚµå ÆÄÀÏÀÌ ÆäÀÌÁö ´ÜÀ§·Î ÀúÀå °ü¸®µÇ±â ¶§¹®¿¡ »ç¿ëÀÚ ÇÁ·Î±×·¥¿¡¼­ ·¹ÄÚµå ÆÄÀÏ·ÎºÎÅÍ µ¥ÀÌÅÍ¸¦ ÀÐ°í ¾µ ¶§µµ
-// ÆäÀÌÁö ´ÜÀ§¸¦ »ç¿ëÇÕ´Ï´Ù. µû¶ó¼­ ¾Æ·¡ÀÇ µÎ ÇÔ¼ö°¡ ÇÊ¿äÇÕ´Ï´Ù.
-// 1. readPage(): ÁÖ¾îÁø ÆäÀÌÁö ¹øÈ£ÀÇ ÆäÀÌÁö µ¥ÀÌÅÍ¸¦ ÇÁ·Î±×·¥ »óÀ¸·Î ÀÐ¾î¿Í¼­ pagebuf¿¡ ÀúÀåÇÑ´Ù
-// 2. writePage(): ÇÁ·Î±×·¥ »óÀÇ pagebufÀÇ µ¥ÀÌÅÍ¸¦ ÁÖ¾îÁø ÆäÀÌÁö ¹øÈ£¿¡ ÀúÀåÇÑ´Ù
-// ·¹ÄÚµå ÆÄÀÏ¿¡¼­ ±âÁ¸ÀÇ ·¹ÄÚµå¸¦ ÀÐ°Å³ª »õ·Î¿î ·¹ÄÚµå¸¦ ¾²°Å³ª »èÁ¦ ·¹ÄÚµå¸¦ ¼öÁ¤ÇÒ ¶§³ª
-// ¸ðµç I/O´Â À§ÀÇ µÎ ÇÔ¼ö¸¦ ¸ÕÀú È£ÃâÇØ¾ß ÇÕ´Ï´Ù. Áï ÆäÀÌÁö ´ÜÀ§·Î ÀÐ°Å³ª ½á¾ß ÇÕ´Ï´Ù.
+typedef struct _Node{
+	int pagenum;
+	int recordnum;
+	struct _Node *next;
+}Node;
 
-//
-// ÆäÀÌÁö ¹øÈ£¿¡ ÇØ´çÇÏ´Â ÆäÀÌÁö¸¦ ÁÖ¾îÁø ÆäÀÌÁö ¹öÆÛ¿¡ ÀÐ¾î¼­ ÀúÀåÇÑ´Ù. ÆäÀÌÁö ¹öÆÛ´Â ¹Ýµå½Ã ÆäÀÌÁö Å©±â¿Í ÀÏÄ¡ÇØ¾ß ÇÑ´Ù.
-//
+Node *head;
+
 void readPage(FILE *fp, char *pagebuf, int pagenum)
 {
-
+	fseek(fp, pagenum * PAGE_SIZE, SEEK_SET);
+	fread(pagebuf, PAGE_SIZE, 1, fp);
 }
 
-//
-// ÆäÀÌÁö ¹öÆÛÀÇ µ¥ÀÌÅÍ¸¦ ÁÖ¾îÁø ÆäÀÌÁö ¹øÈ£¿¡ ÇØ´çÇÏ´Â À§Ä¡¿¡ ÀúÀåÇÑ´Ù. ÆäÀÌÁö ¹öÆÛ´Â ¹Ýµå½Ã ÆäÀÌÁö Å©±â¿Í ÀÏÄ¡ÇØ¾ß ÇÑ´Ù.
-//
 void writePage(FILE *fp, const char *pagebuf, int pagenum)
 {
-
+	fseek(fp, pagenum * PAGE_SIZE, SEEK_SET);
+	fwrite(pagebuf, PAGE_SIZE, 1, fp);
 }
 
-//
-// »õ·Î¿î ·¹ÄÚµå¸¦ ÀúÀåÇÒ ¶§ ÅÍ¹Ì³Î·ÎºÎÅÍ ÀÔ·Â¹ÞÀº Á¤º¸¸¦ Person ±¸Á¶Ã¼¿¡ ¸ÕÀú ÀúÀåÇÏ°í, pack() ÇÔ¼ö¸¦ »ç¿ëÇÏ¿©
-// ·¹ÄÚµå ÆÄÀÏ¿¡ ÀúÀåÇÒ ·¹ÄÚµå ÇüÅÂ¸¦ recordbuf¿¡ ¸¸µç´Ù. ±×·± ÈÄ ÀÌ ·¹ÄÚµå¸¦ ÀúÀåÇÒ ÆäÀÌÁö¸¦ readPage()¸¦ ÅëÇØ ÇÁ·Î±×·¥ »ó¿¡
-// ÀÐ¾î ¿Â ÈÄ pagebuf¿¡ recordbuf¿¡ ÀúÀåµÇ¾î ÀÖ´Â ·¹ÄÚµå¸¦ ÀúÀåÇÑ´Ù. ±× ´ÙÀ½ writePage() È£ÃâÇÏ¿© pagebuf¸¦ ÇØ´ç ÆäÀÌÁö ¹øÈ£¿¡
-// ÀúÀåÇÑ´Ù.
-// 
 void pack(char *recordbuf, const Person *p)
 {
-
+	strcat(recordbuf, p->sn);
+	strcat(recordbuf, "#");
+	strcat(recordbuf, p->name);
+	strcat(recordbuf, "#");
+	strcat(recordbuf, p->age);
+	strcat(recordbuf, "#");
+	strcat(recordbuf, p->addr);
+	strcat(recordbuf, "#");
+	strcat(recordbuf, p->phone);
+	strcat(recordbuf, "#");
+	strcat(recordbuf, p->email);
+	strcat(recordbuf, "#");
 }
 
-// 
-// ¾Æ·¡ÀÇ unpack() ÇÔ¼ö´Â recordbuf¿¡ ÀúÀåµÇ¾î ÀÖ´Â ·¹ÄÚµå¸¦ ±¸Á¶Ã¼·Î º¯È¯ÇÒ ¶§ »ç¿ëÇÑ´Ù. ÀÌ ÇÔ¼ö°¡ ¾ðÁ¦ È£ÃâµÇ´ÂÁö´Â
-// À§¿¡¼­ ¼³¸íÇÑ pack()ÀÇ ½Ã³ª¸®¿À¸¦ ÂüÁ¶ÇÏ¸é µÈ´Ù.
-//
 void unpack(const char *recordbuf, Person *p)
 {
 
 }
 
-//
-// »õ·Î¿î ·¹ÄÚµå¸¦ ÀúÀåÇÏ´Â ±â´ÉÀ» ¼öÇàÇÏ¸ç, ÅÍ¹Ì³Î·ÎºÎÅÍ ÀÔ·Â¹ÞÀº ÇÊµå°ªÀ» ±¸Á¶Ã¼¿¡ ÀúÀåÇÑ ÈÄ ¾Æ·¡ÀÇ insert() ÇÔ¼ö¸¦ È£ÃâÇÑ´Ù.
-//
 void insert(FILE *fp, const Person *p)
 {
+	int	isNextPage = PAGE_SIZE / RECORD_SIZE, offset;
+	int total_pages, total_records, dpage_num, drecord_num;
+	char *recordbuf = malloc(sizeof(char) * RECORD_SIZE);
+	char *pagebuf = malloc(sizeof(char) * PAGE_SIZE);
+	char *headerbuf = malloc(sizeof(char) * PAGE_SIZE);
+	char *tmp = malloc(sizeof(char) * PAGE_SIZE);
+	struct stat statbuf;
+
+	pack(recordbuf, p);
+
+	fstat(fp->_fileno, &statbuf);
+
+	if(statbuf.st_size < 1) // ì²˜ìŒ ì“°ëŠ” ê²½ìš°
+	{
+		// head íŽ˜ì´ì§€ ì„¸íŒ… 
+		total_pages = 2;
+		total_records = 0;
+		dpage_num = -1;
+		drecord_num = -1;
+
+		memset(pagebuf, (char)0xff, PAGE_SIZE);
+		memcpy(pagebuf, &total_pages, sizeof(int));
+		memcpy(pagebuf+4, &total_records, sizeof(int));
+		memcpy(pagebuf+8, &dpage_num, sizeof(int));
+		memcpy(pagebuf+12, &drecord_num, sizeof(int));
+		writePage(fp, pagebuf, 0);
+
+		// ì²« ë²ˆì§¸ íŽ˜ì´ì§€ ì„¸íŒ…
+		memset(pagebuf, (char)0xff, PAGE_SIZE);
+		writePage(fp, pagebuf, 1);
+	}
+
+	// head íŽ˜ì´ì§€ ì •ë³´ read
+	readPage(fp, headerbuf, 0);
+	memcpy(&total_pages, headerbuf, sizeof(int));
+	memcpy(&total_records, headerbuf+4, sizeof(int));
+	memcpy(&dpage_num, headerbuf+8, sizeof(int));
+	memcpy(&drecord_num, headerbuf+12, sizeof(int));
+
+	if(dpage_num == -1 && drecord_num == -1) // ì‚­ì œëœ ë ˆì½”ë“œê°€ ì—†ëŠ” ê²½ìš°
+	{
+		if(total_records % isNextPage != 0 || total_records == 0) // í˜„ìž¬ íŽ˜ì´ì§€ì— ì¨ì•¼í•˜ëŠ” ê²½ìš°
+				total_pages--;
+		else{ // ë‹¤ìŒ íŽ˜ì´ì§€ì— ì¨ì•¼í•˜ëŠ” ê²½ìš°
+			memset(pagebuf, (char)0xff, PAGE_SIZE);
+			writePage(fp, pagebuf, total_pages);
+		}
+
+		readPage(fp, pagebuf, total_pages);
+		offset = (total_records%isNextPage) * RECORD_SIZE;
+		memcpy(pagebuf + offset, recordbuf, RECORD_SIZE);
+		writePage(fp, pagebuf, total_pages);
+
+		total_pages++;
+		total_records++;
+		memcpy(headerbuf, &total_pages, sizeof(int));
+		memcpy(headerbuf+4, &total_records, sizeof(int));
+		writePage(fp,headerbuf, 0);
+	}
+	else // ì‚­ì œëœ ë ˆì½”ë“œê°€ ìžˆëŠ” ê²½ìš°
+	{
+	}
 
 }
 
-//
-// ÁÖ¹Î¹øÈ£¿Í ÀÏÄ¡ÇÏ´Â ·¹ÄÚµå¸¦ Ã£¾Æ¼­ »èÁ¦ÇÏ´Â ±â´ÉÀ» ¼öÇàÇÑ´Ù.
-//
 void delete(FILE *fp, const char *sn)
 {
 
 }
 
+Node* set_delete_list(FILE *fp)
+{
+	int record_num, page_num;
+	struct stat statbuf;
+
+	fstat(fp->_fileno, &statbuf);
+
+	if(statbuf.st_size < 1) // í—¤ë” íŽ˜ì´ì§€ ì—†ëŠ” ê²½ìš°
+		return NULL;
+
+	fseek(fp, 8, SEEK_SET);
+//	fread((void*)page_num, 4, 1, fp);
+//	fread((void*)record_num, 4, 1, fp);
+
+	if(record_num == -1 && page_num == -1) // ì‚­ì œëœ ë ˆì½”ë“œê°€ ì—†ëŠ” ê²½ìš°
+		return NULL;
+
+	fseek(fp, 0, SEEK_SET); // ì˜¤í”„ì…‹ ì´ˆê¸°í™”
+}
+
 int main(int argc, char *argv[])
 {
-	FILE *fp;  // ·¹ÄÚµå ÆÄÀÏÀÇ ÆÄÀÏ Æ÷ÀÎÅÍ
+	FILE *fp;
+	Person person; // Person êµ¬ì¡°ì²´ 
+
+	if((fp = fopen(argv[2], "r+")) < 0){ // dataíŒŒì¼ì´ ì—†ëŠ” ê²½ìš°
+		fprintf(stderr, "fopen error for %s\n", argv[2]);
+		exit(1);
+	}
+
+	//head = set_delete_list(fp);
+
+	if(!strcmp(argv[1], "i"))
+	{
+		strcpy(person.sn, argv[3]);
+		strcpy(person.name, argv[4]);
+		strcpy(person.age, argv[5]);
+		strcpy(person.addr, argv[6]);
+		strcpy(person.phone, argv[7]);
+		strcpy(person.email, argv[8]);
+
+		insert(fp, &person);
+
+	}
+	else if(!strcmp(argv[1], "d"))
+	{
+
+	}
+	else
+		fprintf(stderr, "You can do only 'i' or 'd' at argv[1]\n");
+
+
 
 
 	return 1;
