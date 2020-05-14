@@ -5,13 +5,6 @@
 #include <sys/stat.h>
 #include "person.h"
 
-typedef struct _Node{
-	int pagenum;
-	int recordnum;
-	struct _Node *next;
-}Node;
-
-Node *head;
 const int isNextPage = PAGE_SIZE / RECORD_SIZE;
 
 void readPage(FILE *fp, char *pagebuf, int pagenum)
@@ -28,38 +21,34 @@ void writePage(FILE *fp, const char *pagebuf, int pagenum)
 
 void pack(char *recordbuf, const Person *p)
 {
-/*	strcat(recordbuf, p->sn);
-	strcat(recordbuf, "#");
-	strcat(recordbuf, p->name);
-	strcat(recordbuf, "#");
-	strcat(recordbuf, p->age);
-	strcat(recordbuf, "#");
-	strcat(recordbuf, p->addr);
-	strcat(recordbuf, "#");
-	strcat(recordbuf, p->phone);
-	strcat(recordbuf, "#");
-	strcat(recordbuf, p->email);
-	strcat(recordbuf, "#");*/
 	sprintf(recordbuf, "%s#%s#%s#%s#%s#%s#", p->sn, p->name, p->age, p->addr, p->phone, p->email);
 }
 
 void unpack(const char *recordbuf, Person *p)
 {
+	char temp_recordbuf[RECORD_SIZE];
+	strcpy(temp_recordbuf, recordbuf);
 
+	strcpy(p->sn, strtok(temp_recordbuf, "#"));
+	strcpy(p->name, strtok(NULL, "#"));
+	strcpy(p->age, strtok(NULL, "#"));
+	strcpy(p->addr, strtok(NULL, "#"));
+	strcpy(p->phone, strtok(NULL, "#"));
+	strcpy(p->email, strtok(NULL, "#"));
 }
 
 void insert(FILE *fp, const Person *p)
 {
-	int offset;
+	int offset, page_tmp, record_tmp;
 	int total_pages, total_records, dpage_num, drecord_num;
 	char *recordbuf = malloc(sizeof(char) * RECORD_SIZE);
+	char *deletebuf = malloc(sizeof(char) * RECORD_SIZE);
 	char *pagebuf = malloc(sizeof(char) * PAGE_SIZE);
 	char *headerbuf = malloc(sizeof(char) * PAGE_SIZE);
 	char *tmp = malloc(sizeof(char) * PAGE_SIZE);
 	struct stat statbuf;
 
 	pack(recordbuf, p);
-	printf("%s\n", recordbuf);
 
 	fstat(fp->_fileno, &statbuf);
 
@@ -112,8 +101,21 @@ void insert(FILE *fp, const Person *p)
 	}
 	else // 삭제된 레코드가 있는 경우
 	{
-	}
+		readPage(fp, pagebuf, dpage_num);
+		memcpy(deletebuf, pagebuf+(drecord_num*RECORD_SIZE), RECORD_SIZE);
+		printf("%s\n", deletebuf);
 
+		memcpy(&page_tmp, deletebuf+1, sizeof(int)); // 다음 삭제 페이지 저장
+		memcpy(&record_tmp, deletebuf+5, sizeof(int)); // 다음 삭제 페이지 저장
+
+		memcpy(pagebuf+(drecord_num*RECORD_SIZE), recordbuf, RECORD_SIZE);
+		writePage(fp, pagebuf, dpage_num); // 삭제 페이지에 레코드 저장 
+
+		// haeder 페이지 갱신
+		memcpy(headerbuf+8, &page_tmp, sizeof(int));
+		memcpy(headerbuf+12, &record_tmp, sizeof(int));
+		writePage(fp, headerbuf, 0);
+	}
 }
 
 void delete(FILE *fp, const char *sn)
@@ -125,6 +127,7 @@ void delete(FILE *fp, const char *sn)
 	char *pagebuf = malloc(sizeof(char) * PAGE_SIZE);
 	char *headerbuf = malloc(sizeof(char) * PAGE_SIZE);
 	char *tmp = malloc(sizeof(char) * PAGE_SIZE);
+	Person person;
 
 	readPage(fp, headerbuf, 0);
 	memcpy(&total_pages, headerbuf, sizeof(int));
@@ -136,20 +139,16 @@ void delete(FILE *fp, const char *sn)
 		readPage(fp, pagebuf, i);
 
 		while(count != isNextPage){
-			memcpy(tmp_sn, pagebuf + (count*RECORD_SIZE), 14);
+			memcpy(recordbuf, pagebuf + (count*RECORD_SIZE), RECORD_SIZE);
 
-			if(tmp_sn[0] == '*'){ // 삭제된 데이터인 경우 검사 스킵
+			if(recordbuf[0]=='*'){ // 삭제된 데이터면 검사 스킵
 				count++;
 				continue;
 			}
+			else // recordbuf unpack해서 person에 저장 
+				unpack(recordbuf, &person);
 
-			for(j = 0; j < 14; j++) // 주민번호 파싱
-				if(tmp_sn[j] == '#'){
-					tmp_sn[j] = '\0';
-					break;
-				}
-
-			if(!strcmp(tmp_sn, sn)){ // 주민 번호 일치하는 경우 삭제 진행
+			if(!strcmp(person.sn, sn)){ // 주민 번호 일치하는 경우 삭제 진행
 				memset(pagebuf + (count*RECORD_SIZE), (char)0xff, RECORD_SIZE);
 				memset(pagebuf + (count*RECORD_SIZE), '*', 1);
 				memcpy(pagebuf + (count*RECORD_SIZE) + 1, &dpage_num, sizeof(int));
@@ -169,26 +168,6 @@ void delete(FILE *fp, const char *sn)
 	}
 }
 
-Node* set_delete_list(FILE *fp)
-{
-	int record_num, page_num;
-	struct stat statbuf;
-
-	fstat(fp->_fileno, &statbuf);
-
-	if(statbuf.st_size < 1) // 헤더 페이지 없는 경우
-		return NULL;
-
-	fseek(fp, 8, SEEK_SET);
-//	fread((void*)page_num, 4, 1, fp);
-//	fread((void*)record_num, 4, 1, fp);
-
-	if(record_num == -1 && page_num == -1) // 삭제된 레코드가 없는 경우
-		return NULL;
-
-	fseek(fp, 0, SEEK_SET); // 오프셋 초기화
-}
-
 int main(int argc, char *argv[])
 {
 	FILE *fp;
@@ -198,8 +177,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "fopen error for %s\n", argv[2]);
 		exit(1);
 	}
-
-	//head = set_delete_list(fp);
 
 	if(!strcmp(argv[1], "i"))
 	{
@@ -221,8 +198,6 @@ int main(int argc, char *argv[])
 	else
 		fprintf(stderr, "You can do only 'i' or 'd' at argv[1]\n");
 
-
-
-
+	fclose(fp);
 	return 1;
 }
