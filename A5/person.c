@@ -82,7 +82,7 @@ void insert(FILE *fp, const Person *p)
 	if(dpage_num == -1 && drecord_num == -1) // 삭제된 레코드가 없는 경우
 	{
 		if(total_records % isNextPage != 0 || total_records == 0) // 현재 페이지에 써야하는 경우
-				total_pages--;
+			total_pages--;
 		else{ // 다음 페이지에 써야하는 경우
 			memset(pagebuf, (char)0xff, PAGE_SIZE);
 			writePage(fp, pagebuf, total_pages);
@@ -103,7 +103,6 @@ void insert(FILE *fp, const Person *p)
 	{
 		readPage(fp, pagebuf, dpage_num);
 		memcpy(deletebuf, pagebuf+(drecord_num*RECORD_SIZE), RECORD_SIZE);
-		printf("%s\n", deletebuf);
 
 		memcpy(&page_tmp, deletebuf+1, sizeof(int)); // 다음 삭제 페이지 저장
 		memcpy(&record_tmp, deletebuf+5, sizeof(int)); // 다음 삭제 페이지 저장
@@ -173,6 +172,11 @@ int main(int argc, char *argv[])
 	FILE *fp;
 	Person person; // Person 구조체 
 
+	if(argc < 2){
+		fprintf(stderr, "more argv please\n");
+		exit(1);
+	}
+
 	if((fp = fopen(argv[2], "r+")) < 0){ // data파일이 없는 경우
 		fprintf(stderr, "fopen error for %s\n", argv[2]);
 		exit(1);
@@ -180,6 +184,11 @@ int main(int argc, char *argv[])
 
 	if(!strcmp(argv[1], "i"))
 	{
+		if(argc < 9){
+			fprintf(stderr, "more argv please\n");
+			exit(1);
+		}
+
 		strcpy(person.sn, argv[3]);
 		strcpy(person.name, argv[4]);
 		strcpy(person.age, argv[5]);
@@ -192,8 +201,12 @@ int main(int argc, char *argv[])
 	}
 	else if(!strcmp(argv[1], "d"))
 	{
-		delete(fp, argv[3]);
+		if(argc < 4){
+			fprintf(stderr, "more argv please\n");
+			exit(1);
+		}
 
+		delete(fp, argv[3]);
 	}
 	else
 		fprintf(stderr, "You can do only 'i' or 'd' at argv[1]\n");
