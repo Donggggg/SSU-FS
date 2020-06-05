@@ -9,10 +9,12 @@
 #include "flash.h"
 
 extern FILE *flashfp;				// ftlmgr.c에 정의되어 있음
+extern int ccc[3];
 
 int dd_read(int ppn, char *pagebuf)
 {
 	int ret;
+	ccc[0]++;
 
 	fseek(flashfp, PAGE_SIZE*ppn, SEEK_SET);
 	ret = fread((void *)pagebuf, PAGE_SIZE, 1, flashfp);
@@ -27,7 +29,7 @@ int dd_read(int ppn, char *pagebuf)
 int dd_write(int ppn, char *pagebuf)
 {
 	int ret;
-
+	ccc[1]++;
 	fseek(flashfp, PAGE_SIZE*ppn, SEEK_SET);
 	ret = fwrite((void *)pagebuf, PAGE_SIZE, 1, flashfp);
 	if(ret == 1) {			
@@ -42,7 +44,7 @@ int dd_erase(int pbn)
 {
 	char blockbuf[BLOCK_SIZE];
 	int ret;
-
+	ccc[2]++;
 	memset((void*)blockbuf, (char)0xFF, BLOCK_SIZE);
 
 	fseek(flashfp, BLOCK_SIZE*pbn, SEEK_SET);

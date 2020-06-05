@@ -148,7 +148,6 @@ void delete(FILE *fp, const char *sn)
 				unpack(recordbuf, &person);
 
 			if(!strcmp(person.sn, sn)){ // 주민 번호 일치하는 경우 삭제 진행
-				memset(pagebuf + (count*RECORD_SIZE), (char)0xff, RECORD_SIZE);
 				memset(pagebuf + (count*RECORD_SIZE), '*', 1);
 				memcpy(pagebuf + (count*RECORD_SIZE) + 1, &dpage_num, sizeof(int));
 				memcpy(pagebuf + (count*RECORD_SIZE) + 5, &drecord_num, sizeof(int));
@@ -214,3 +213,4 @@ int main(int argc, char *argv[])
 	fclose(fp);
 	return 1;
 }
+

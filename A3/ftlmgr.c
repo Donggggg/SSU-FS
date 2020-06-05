@@ -8,6 +8,7 @@ int dd_write(int ppn, char *pagebuf);
 int dd_erase(int pbn);
 
 FILE *flashfp;	// fdevicedriver.c에서 사용
+int ccc[3]={0,0,0};
 
 int main(int argc, char *argv[])
 {	
@@ -75,7 +76,7 @@ int main(int argc, char *argv[])
 
 					if(block_num  == page_num / 4)
 						block_num = rand() % size;
-						
+
 					fseek(flashfp, block_num * BLOCK_SIZE, SEEK_SET);
 
 					for(i = 0; i < PAGE_NUM; i++){
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
 					if(i == PAGE_NUM)
 						break;
 				}
-				
+
 				for(i = 1; i < PAGE_NUM; i++){ // free block으로 복사
 					if(++page_num % PAGE_NUM == 0)
 						page_num = page_num - PAGE_NUM;
@@ -174,5 +175,6 @@ int main(int argc, char *argv[])
 	}
 
 	fclose(flashfp);
+	printf("r : %d w : %d e : %d\n", ccc[0],ccc[1],ccc[2]);
 	return 0;
 }

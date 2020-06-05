@@ -1,0 +1,6 @@
+if (count > 0)
+{
+	sum = (a+b);
+	avg1 = sum / total + 999;
+}
+return 0;
