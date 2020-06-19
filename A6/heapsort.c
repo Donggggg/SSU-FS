@@ -55,7 +55,7 @@ void buildHeap(FILE *inputfp, char **heaparray)
 
 		prt = cur / 2;
 
-		if(atoi(heaparray[cur]) < atoi(heaparray[prt])){
+		if(atoll(heaparray[cur]) < atoll(heaparray[prt])){
 			strcpy(tmp, heaparray[cur]);
 			strcpy(heaparray[cur], heaparray[prt]);
 			strcpy(heaparray[prt], tmp);
@@ -97,10 +97,10 @@ void makeSortedFile(FILE *outputfp, char **heaparray)
 				if(heaparray[chd1] == NULL && heaparray[chd2] == NULL)
 					break;
 
-				if(atoi(heaparray[chd1]) > atoi(heaparray[chd2]))
+				if(atoll(heaparray[chd1]) > atoll(heaparray[chd2]))
 					chd1 = chd2;
 
-				if(atoi(heaparray[chd1]) > atoi(heaparray[cur]))
+				if(atoll(heaparray[chd1]) > atoll(heaparray[cur]))
 					break;
 				else{
 					if(chd1 > last)
@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if(strcmp(argv[1], "r")){ // 없는 옵션 오류 처리
-		fprintf(stderr, "only r option\n");
+	if(strcmp(argv[1], "s")){ // 없는 옵션 오류 처리
+		fprintf(stderr, "only s option\n");
 		exit(1);
 	}
 

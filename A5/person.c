@@ -211,5 +211,5 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "You can do only 'i' or 'd' at argv[1]\n");
 
 	fclose(fp);
-	return 1;
+	return 0;
 }
